@@ -42,6 +42,22 @@ export class HashChainedAuditSink implements IAuditSink
         return this.chains.get(tenantId) ?? [];
     }
 
+    public Verify(tenantId: string): boolean
+    {
+        const chain = this.chains.get(tenantId) ?? [];
+        let expectedPrev = HashChainedAuditSink.Genesis;
+        for (let i = 0; i < chain.length; i++)
+        {
+            const r = chain[i]!;
+            if (r.Sequence !== i || r.PrevHash !== expectedPrev || r.Hash !== this.Compute(r.PrevHash, r.Event))
+            {
+                return false;
+            }
+            expectedPrev = r.Hash;
+        }
+        return true;
+    }
+
     // Canonical format: fields joined by FieldSep, in order
     //   prevHash, Kind, TenantId, PrincipalId, At (ISO-8601), Detail.
     // Every free-text value (TenantId, PrincipalId, detail keys/values) is length-prefixed
