@@ -19,6 +19,7 @@ export class CachingRoleGrantStore implements IRoleGrantStore
     private static readonly KeySeparator = "\u0000";
 
     private readonly cache = new Map<string, CacheEntry>();
+    private generation = 0;
 
     public constructor(
         private readonly backing: IRoleGrantStore,
@@ -36,8 +37,12 @@ export class CachingRoleGrantStore implements IRoleGrantStore
         {
             return hit.Grants;
         }
+        const gen = this.generation;
         const grants = await this.backing.GrantsFor(subject, tenant);
-        this.cache.set(key, new CacheEntry(subject, grants, nowMs + this.ttlMs));
+        if (this.generation === gen)
+        {
+            this.cache.set(key, new CacheEntry(subject, grants, nowMs + this.ttlMs));
+        }
         return grants;
     }
 
@@ -49,6 +54,7 @@ export class CachingRoleGrantStore implements IRoleGrantStore
 
     public Invalidate(subject: string): void
     {
+        this.generation += 1;
         for (const [key, entry] of [...this.cache])
         {
             if (entry.Subject === subject)
@@ -60,6 +66,7 @@ export class CachingRoleGrantStore implements IRoleGrantStore
 
     public Clear(): void
     {
+        this.generation += 1;
         this.cache.clear();
     }
 

@@ -106,3 +106,58 @@ test("per-(tenant,subject) keys do not collide", async () =>
     await store.GrantsFor("u1", Fixture.Tenant("t2"));
     assert.equal(spy.Calls, 2);
 });
+
+test("TTL boundary: exactly ttlMs refetches", async () =>
+{
+    const spy = new SpyGrantStore();
+    const clock = new Clock();
+    const store = new CachingRoleGrantStore(spy, 1000, clock.Now);
+    await store.GrantsFor("u1", Fixture.Tenant());
+    clock.Ms += 1000;
+    await store.GrantsFor("u1", Fixture.Tenant());
+    assert.equal(spy.Calls, 2);
+});
+
+test("TTL boundary: ttlMs - 1 is still a cache hit", async () =>
+{
+    const spy = new SpyGrantStore();
+    const clock = new Clock();
+    const store = new CachingRoleGrantStore(spy, 1000, clock.Now);
+    await store.GrantsFor("u1", Fixture.Tenant());
+    clock.Ms += 999;
+    await store.GrantsFor("u1", Fixture.Tenant());
+    assert.equal(spy.Calls, 1);
+});
+
+class DeferredGrantStore implements IRoleGrantStore
+{
+    public Calls = 0;
+    public Release: (() => void) | undefined;
+    private readonly grants: Grant[] = [];
+    public async GrantsFor(subject: string, _tenant: Tenant): Promise<readonly Grant[]>
+    {
+        this.Calls += 1;
+        const snapshot = this.grants.filter((g) => g.Subject === subject);
+        if (this.Calls === 1)
+        {
+            await new Promise<void>((resolve) => { this.Release = resolve; });
+        }
+        return snapshot;
+    }
+    public async Save(grant: Grant): Promise<void> { this.grants.push(grant); }
+}
+
+test("in-flight fetch overtaken by Save does not cache the stale list", async () =>
+{
+    const backing = new DeferredGrantStore();
+    const store = new CachingRoleGrantStore(backing, 1000, new Clock().Now);
+    const inFlight = store.GrantsFor("u1", Fixture.Tenant());
+    await store.Save(Fixture.Grant("u1", Role.Admin));
+    backing.Release!();
+    const stale = await inFlight;
+    assert.equal(stale.length, 0);
+    const fresh = await store.GrantsFor("u1", Fixture.Tenant());
+    assert.equal(backing.Calls, 2);
+    assert.equal(fresh.length, 1);
+    assert.equal(fresh[0]!.Role, Role.Admin);
+});
