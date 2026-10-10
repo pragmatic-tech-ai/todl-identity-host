@@ -15,6 +15,7 @@ class Fixture
     public static readonly Hacked = "HACKED";
     public static readonly BadHashChar = "f";
     public static readonly HashLength = 64;
+    public static readonly ChainLength = 3;
 
     public static Event(tenantId: string, detail?: ReadonlyMap<string, string>): AuditEvent
     {
@@ -29,9 +30,10 @@ class Fixture
 
     public static async Three(sink: HashChainedAuditSink): Promise<void>
     {
-        await sink.Record(Fixture.Indexed(Fixture.T1, "0"));
-        await sink.Record(Fixture.Indexed(Fixture.T1, "1"));
-        await sink.Record(Fixture.Indexed(Fixture.T1, "2"));
+        for (let i = 0; i < Fixture.ChainLength; i++)
+        {
+            await sink.Record(Fixture.Indexed(Fixture.T1, String(i)));
+        }
     }
 
     public static Chain(sink: HashChainedAuditSink, tenantId: string): ChainedAuditRecord[]
