@@ -5,5 +5,6 @@ export type { IIdentityProviderPackFactory } from "./tenancy/factory-identity-pr
 export { MappingTenantResolver } from "./tenancy/mapping-tenant-resolver.js";
 export { SingleTenantResolver } from "./tenancy/single-tenant-resolver.js";
 export { CachingRoleGrantStore } from "./tenancy/caching-role-grant-store.js";
+export { AuditTamperDetected } from "./audit/audit-tamper-detected.js";
 export { ChainedAuditRecord } from "./audit/chained-audit-record.js";
 export { HashChainedAuditSink } from "./audit/hash-chained-audit-sink.js";

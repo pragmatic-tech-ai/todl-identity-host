@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import type { AuditEvent, IAuditSink } from "@pragmatic-tech-ai/todl-identity";
+import { AuditTamperDetected } from "./audit-tamper-detected.js";
 import { ChainedAuditRecord } from "./chained-audit-record.js";
 
 export class HashChainedAuditSink implements IAuditSink
@@ -20,17 +21,34 @@ export class HashChainedAuditSink implements IAuditSink
     {
     }
 
-    public async Record(event: AuditEvent): Promise<void>
+    public Next(tenantId: string, event: AuditEvent): ChainedAuditRecord
     {
-        let arr = this.chains.get(event.TenantId);
+        const arr = this.chains.get(tenantId) ?? [];
+        const prevHash = arr.length === 0 ? HashChainedAuditSink.Genesis : arr[arr.length - 1]!.Hash;
+        const hash = this.Compute(prevHash, event);
+        return new ChainedAuditRecord(event, arr.length, prevHash, hash);
+    }
+
+    public Append(record: ChainedAuditRecord): void
+    {
+        let arr = this.chains.get(record.Event.TenantId);
         if (arr === undefined)
         {
             arr = [];
-            this.chains.set(event.TenantId, arr);
+            this.chains.set(record.Event.TenantId, arr);
         }
-        const prevHash = arr.length === 0 ? HashChainedAuditSink.Genesis : arr[arr.length - 1]!.Hash;
-        const hash = this.Compute(prevHash, event);
-        arr.push(new ChainedAuditRecord(event, arr.length, prevHash, hash));
+        const expectedPrev = arr.length === 0 ? HashChainedAuditSink.Genesis : arr[arr.length - 1]!.Hash;
+        if (record.Sequence !== arr.length || record.PrevHash !== expectedPrev)
+        {
+            throw new AuditTamperDetected(record.Event.TenantId, record.Sequence);
+        }
+        arr.push(record);
+    }
+
+    public async Record(event: AuditEvent): Promise<void>
+    {
+        const record = this.Next(event.TenantId, event);
+        this.Append(record);
         if (this.backing !== undefined)
         {
             await this.backing.Record(event);
