@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { DelegationDepth, IdentityConfig, Principal, PrincipalKind, Tenant, TenantKind } from "@pragmatic-tech-ai/todl-identity";
-import type { IIdentityProviderPack, IdentityConfig as Config, Tenant as T } from "@pragmatic-tech-ai/todl-identity";
+import type { IIdentityProviderPack } from "@pragmatic-tech-ai/todl-identity";
 import { FakeIdentityProviderPack } from "@pragmatic-tech-ai/todl-identity/testing";
 import { InMemoryTenantConfigStore } from "../in-memory-tenant-config-store.js";
 import { FactoryIdentityProviderRegistry } from "../factory-identity-provider-registry.js";
@@ -9,11 +9,14 @@ import type { IIdentityProviderPackFactory } from "../factory-identity-provider-
 
 class CountingFactory implements IIdentityProviderPackFactory
 {
+    private static readonly PrincipalId = "u1";
+    private static readonly PrincipalTenantId = "t1";
+
     public Calls = 0;
-    public async Build(_tenant: T, _config: Config): Promise<IIdentityProviderPack>
+    public async Build(_tenant: Tenant, _config: IdentityConfig): Promise<IIdentityProviderPack>
     {
         this.Calls += 1;
-        return new FakeIdentityProviderPack(DelegationDepth.FullAuthz, new Principal("u1", "t1", PrincipalKind.User, new Map(), []));
+        return new FakeIdentityProviderPack(DelegationDepth.FullAuthz, new Principal(CountingFactory.PrincipalId, CountingFactory.PrincipalTenantId, PrincipalKind.User, new Map(), []));
     }
 }
 

@@ -12,7 +12,7 @@ export class FactoryIdentityProviderRegistry implements IIdentityProviderRegistr
 {
     private static readonly UnconfiguredTenantError = "No identity configuration for tenant: ";
 
-    private readonly cache = new Map<string, IIdentityProviderPack>();
+    private readonly cache = new Map<string, Promise<IIdentityProviderPack>>();
 
     public constructor(
         private readonly configs: ITenantConfigStore,
@@ -20,20 +20,26 @@ export class FactoryIdentityProviderRegistry implements IIdentityProviderRegistr
     {
     }
 
-    public async PackFor(tenant: Tenant): Promise<IIdentityProviderPack>
+    public PackFor(tenant: Tenant): Promise<IIdentityProviderPack>
     {
         const cached = this.cache.get(tenant.Id);
         if (cached !== undefined)
         {
             return cached;
         }
+        const built = this.Build(tenant);
+        this.cache.set(tenant.Id, built);
+        built.catch(() => this.cache.delete(tenant.Id));
+        return built;
+    }
+
+    private async Build(tenant: Tenant): Promise<IIdentityProviderPack>
+    {
         const config = await this.configs.Get(tenant.Id);
         if (config === null)
         {
             throw new Error(FactoryIdentityProviderRegistry.UnconfiguredTenantError + tenant.Id);
         }
-        const pack = await this.factory.Build(tenant, config);
-        this.cache.set(tenant.Id, pack);
-        return pack;
+        return this.factory.Build(tenant, config);
     }
 }
