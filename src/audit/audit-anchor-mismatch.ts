@@ -3,7 +3,7 @@ import type { AuditAnchorReason } from "./audit-anchor-reason.js";
 
 export class AuditAnchorMismatch extends AuditTamperDetected
 {
-    private static readonly ErrorName = "AuditAnchorMismatch";
+    private static readonly MismatchName = "AuditAnchorMismatch";
     private static readonly ReasonLabel = " reason ";
 
     public readonly Reason: AuditAnchorReason;
@@ -12,7 +12,7 @@ export class AuditAnchorMismatch extends AuditTamperDetected
     public constructor(tenantId: string, seq: number, reason: AuditAnchorReason)
     {
         super(tenantId, seq);
-        this.name = AuditAnchorMismatch.ErrorName;
+        this.name = AuditAnchorMismatch.MismatchName;
         this.message = this.message + AuditAnchorMismatch.ReasonLabel + reason;
         this.Reason = reason;
     }
