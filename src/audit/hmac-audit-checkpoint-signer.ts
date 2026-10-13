@@ -5,6 +5,7 @@ export class HmacAuditCheckpointSigner implements IAuditCheckpointSigner
 {
     private static readonly Algo = "sha256";
     private static readonly Encoding = "hex";
+    private static readonly TextEncoding = "utf8";
     private static readonly FieldSep = "\u0000";
     private static readonly LengthSep = ":";
 
@@ -12,7 +13,7 @@ export class HmacAuditCheckpointSigner implements IAuditCheckpointSigner
 
     public constructor(key: string | Buffer)
     {
-        this.key = typeof key === "string" ? Buffer.from(key, "utf8") : key;
+        this.key = typeof key === "string" ? Buffer.from(key, HmacAuditCheckpointSigner.TextEncoding) : Buffer.from(key);
     }
 
     public Sign(tenantId: string, sequence: number, headHash: string, at: string): string
@@ -24,13 +25,14 @@ export class HmacAuditCheckpointSigner implements IAuditCheckpointSigner
 
     public Verify(tenantId: string, sequence: number, headHash: string, at: string, signature: string): boolean
     {
-        const expected = Buffer.from(this.Sign(tenantId, sequence, headHash, at), HmacAuditCheckpointSigner.Encoding);
-        const given = Buffer.from(signature, HmacAuditCheckpointSigner.Encoding);
-        if (expected.length !== given.length || expected.length === 0)
+        const expected = this.Sign(tenantId, sequence, headHash, at);
+        if (expected.length !== signature.length)
         {
             return false;
         }
-        return timingSafeEqual(expected, given);
+        return timingSafeEqual(
+            Buffer.from(expected, HmacAuditCheckpointSigner.TextEncoding),
+            Buffer.from(signature, HmacAuditCheckpointSigner.TextEncoding));
     }
 
     // Fields joined by FieldSep; every free-text field is length-prefixed ("<len>:<text>") so a
