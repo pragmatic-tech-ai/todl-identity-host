@@ -30,6 +30,8 @@ test("verify returns false (never throws) on an unequal-length or invalid signat
     assert.equal(s.Verify("t1", 3, "abc", "2026-01-01T00:00:00.000Z", good + "zz"), false);
     assert.equal(s.Verify("t1", 3, "abc", "2026-01-01T00:00:00.000Z", good + "0"), false);
     assert.equal(s.Verify("t1", 3, "abc", "2026-01-01T00:00:00.000Z", good.toUpperCase()), false);
+    assert.equal(s.Verify("t1", 3, "abc", "2026-01-01T00:00:00.000Z", "é".repeat(32)), false);
+    assert.equal(s.Verify("t1", 3, "abc", "2026-01-01T00:00:00.000Z", "a".repeat(63) + "é"), false);
 });
 
 test("a different key produces a different signature", () =>

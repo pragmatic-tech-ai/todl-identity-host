@@ -25,14 +25,13 @@ export class HmacAuditCheckpointSigner implements IAuditCheckpointSigner
 
     public Verify(tenantId: string, sequence: number, headHash: string, at: string, signature: string): boolean
     {
-        const expected = this.Sign(tenantId, sequence, headHash, at);
-        if (expected.length !== signature.length)
+        const expected = Buffer.from(this.Sign(tenantId, sequence, headHash, at), HmacAuditCheckpointSigner.TextEncoding);
+        const given = Buffer.from(signature, HmacAuditCheckpointSigner.TextEncoding);
+        if (expected.length !== given.length)
         {
             return false;
         }
-        return timingSafeEqual(
-            Buffer.from(expected, HmacAuditCheckpointSigner.TextEncoding),
-            Buffer.from(signature, HmacAuditCheckpointSigner.TextEncoding));
+        return timingSafeEqual(expected, given);
     }
 
     // Fields joined by FieldSep; every free-text field is length-prefixed ("<len>:<text>") so a
