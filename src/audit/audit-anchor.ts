@@ -1,5 +1,4 @@
-import type { AuditCheckpoint } from "./audit-checkpoint.js";
-import { AuditCheckpoint as Checkpoint } from "./audit-checkpoint.js";
+import { AuditCheckpoint } from "./audit-checkpoint.js";
 import { AuditAnchorMismatch } from "./audit-anchor-mismatch.js";
 import { AuditAnchorReason } from "./audit-anchor-reason.js";
 import type { ChainedAuditRecord } from "./chained-audit-record.js";
@@ -53,7 +52,7 @@ export class AuditAnchor
         const head = records[records.length - 1]!;
         const at = this.now().toISOString();
         const signature = this.signer.Sign(tenantId, records.length, head.Hash, at);
-        return new Checkpoint(tenantId, records.length, head.Hash, at, signature);
+        return new AuditCheckpoint(tenantId, records.length, head.Hash, at, signature);
     }
 
     public DueFrom(count: number, anchoredSeq: number): boolean

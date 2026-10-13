@@ -7,52 +7,59 @@ import { AuditAnchor } from "../audit-anchor.js";
 import { AuditAnchorMismatch } from "../audit-anchor-mismatch.js";
 import { AuditAnchorReason } from "../audit-anchor-reason.js";
 import { AuditCheckpoint } from "../audit-checkpoint.js";
+import type { ChainedAuditRecord } from "../chained-audit-record.js";
 
-const records = (tenant: string, n: number) =>
+class AuditAnchorFixtures
 {
-    const chain = new HashChainedAuditSink();
-    for (let i = 0; i < n; i++)
+    public static Records(tenant: string, n: number): readonly ChainedAuditRecord[]
     {
-        const ev = new AuditEvent(AuditEventKind.AdminAction, tenant, "p1", new Date("2026-01-01T00:00:00Z"), new Map([["i", String(i)]]));
-        chain.Record(ev);
+        const chain = new HashChainedAuditSink();
+        for (let i = 0; i < n; i++)
+        {
+            const ev = new AuditEvent(AuditEventKind.AdminAction, tenant, "p1", new Date("2026-01-01T00:00:00Z"), new Map([["i", String(i)]]));
+            chain.Record(ev);
+        }
+        return chain.Records(tenant);
     }
-    return chain.Records(tenant);
-};
 
-const anchor = () => new AuditAnchor(new HmacAuditCheckpointSigner("k"), 1, () => new Date("2026-01-01T00:00:00Z"));
+    public static Anchor(): AuditAnchor
+    {
+        return new AuditAnchor(new HmacAuditCheckpointSigner("k"), 1, () => new Date("2026-01-01T00:00:00Z"));
+    }
+}
 
 test("Verify is a no-op when there is no checkpoint", () =>
 {
-    anchor().Verify(records("t1", 3), undefined);
+    AuditAnchorFixtures.Anchor().Verify(AuditAnchorFixtures.Records("t1", 3), undefined);
 });
 
 test("Verify passes on a matching signed checkpoint", () =>
 {
-    const a = anchor();
-    const recs = records("t1", 3);
+    const a = AuditAnchorFixtures.Anchor();
+    const recs = AuditAnchorFixtures.Records("t1", 3);
     const cp = a.Build("t1", recs)!;
     a.Verify(recs, cp);
 });
 
 test("Verify throws Truncated when the live chain is shorter than the checkpoint", () =>
 {
-    const a = anchor();
-    const cp = a.Build("t1", records("t1", 3))!;
-    assert.throws(() => a.Verify(records("t1", 2), cp), (e: unknown) => e instanceof AuditAnchorMismatch && e.Reason === AuditAnchorReason.Truncated);
+    const a = AuditAnchorFixtures.Anchor();
+    const cp = a.Build("t1", AuditAnchorFixtures.Records("t1", 3))!;
+    assert.throws(() => a.Verify(AuditAnchorFixtures.Records("t1", 2), cp), (e: unknown) => e instanceof AuditAnchorMismatch && e.Reason === AuditAnchorReason.Truncated);
 });
 
 test("Verify throws Diverged when the head at the anchored seq differs", () =>
 {
-    const a = anchor();
-    const cp = new AuditCheckpoint("t1", 3, "not-the-real-head", "2026-01-01T00:00:00.000Z", "");
-    const signed = new AuditCheckpoint(cp.TenantId, cp.Sequence, cp.HeadHash, cp.At, new HmacAuditCheckpointSigner("k").Sign(cp.TenantId, cp.Sequence, cp.HeadHash, cp.At));
-    assert.throws(() => a.Verify(records("t1", 3), signed), (e: unknown) => e instanceof AuditAnchorMismatch && e.Reason === AuditAnchorReason.Diverged);
+    const a = AuditAnchorFixtures.Anchor();
+    const at = "2026-01-01T00:00:00.000Z";
+    const signed = new AuditCheckpoint("t1", 3, "not-the-real-head", at, new HmacAuditCheckpointSigner("k").Sign("t1", 3, "not-the-real-head", at));
+    assert.throws(() => a.Verify(AuditAnchorFixtures.Records("t1", 3), signed), (e: unknown) => e instanceof AuditAnchorMismatch && e.Reason === AuditAnchorReason.Diverged);
 });
 
 test("Verify throws SignatureInvalid when the signature does not verify", () =>
 {
-    const a = anchor();
-    const recs = records("t1", 3);
+    const a = AuditAnchorFixtures.Anchor();
+    const recs = AuditAnchorFixtures.Records("t1", 3);
     const good = a.Build("t1", recs)!;
     const forged = new AuditCheckpoint(good.TenantId, good.Sequence, good.HeadHash, good.At, "deadbeef");
     assert.throws(() => a.Verify(recs, forged), (e: unknown) => e instanceof AuditAnchorMismatch && e.Reason === AuditAnchorReason.SignatureInvalid);
@@ -60,9 +67,9 @@ test("Verify throws SignatureInvalid when the signature does not verify", () =>
 
 test("Build returns undefined for an empty chain and a signed checkpoint otherwise", () =>
 {
-    const a = anchor();
-    assert.equal(a.Build("t1", records("t1", 0)), undefined);
-    const cp = a.Build("t1", records("t1", 2))!;
+    const a = AuditAnchorFixtures.Anchor();
+    assert.equal(a.Build("t1", AuditAnchorFixtures.Records("t1", 0)), undefined);
+    const cp = a.Build("t1", AuditAnchorFixtures.Records("t1", 2))!;
     assert.equal(cp.Sequence, 2);
 });
 
@@ -78,8 +85,17 @@ test("DueFrom honours the interval", () =>
     assert.equal(five.DueFrom(11, 6), true);
 });
 
-test("the constructor rejects a non-integer or < 1 interval", () =>
+test("Verify reports SignatureInvalid before Truncated when both hold", () =>
 {
-    assert.throws(() => new AuditAnchor(new HmacAuditCheckpointSigner("k"), 0));
-    assert.throws(() => new AuditAnchor(new HmacAuditCheckpointSigner("k"), 1.5));
+    const a = AuditAnchorFixtures.Anchor();
+    const forged = new AuditCheckpoint("t1", 9, "whatever", "2026-01-01T00:00:00.000Z", "deadbeef");
+    assert.throws(() => a.Verify(AuditAnchorFixtures.Records("t1", 2), forged), (e: unknown) => e instanceof AuditAnchorMismatch && e.Reason === AuditAnchorReason.SignatureInvalid);
+});
+
+test("the constructor rejects a non-integer, NaN, or < 1 interval", () =>
+{
+    assert.throws(() => new AuditAnchor(new HmacAuditCheckpointSigner("k"), 0), RangeError);
+    assert.throws(() => new AuditAnchor(new HmacAuditCheckpointSigner("k"), 1.5), RangeError);
+    assert.throws(() => new AuditAnchor(new HmacAuditCheckpointSigner("k"), -1), RangeError);
+    assert.throws(() => new AuditAnchor(new HmacAuditCheckpointSigner("k"), Number.NaN), RangeError);
 });
