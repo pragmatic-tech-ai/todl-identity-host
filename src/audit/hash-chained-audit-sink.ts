@@ -31,16 +31,20 @@ export class HashChainedAuditSink implements IAuditSink
 
     public Append(record: ChainedAuditRecord): void
     {
-        let arr = this.chains.get(record.Event.TenantId);
+        const existing = this.chains.get(record.Event.TenantId);
+        const expectedSeq = existing === undefined ? 0 : existing.length;
+        const expectedPrev = existing === undefined || existing.length === 0
+            ? HashChainedAuditSink.Genesis
+            : existing[existing.length - 1]!.Hash;
+        if (record.Sequence !== expectedSeq || record.PrevHash !== expectedPrev)
+        {
+            throw new AuditTamperDetected(record.Event.TenantId, record.Sequence);
+        }
+        let arr = existing;
         if (arr === undefined)
         {
             arr = [];
             this.chains.set(record.Event.TenantId, arr);
-        }
-        const expectedPrev = arr.length === 0 ? HashChainedAuditSink.Genesis : arr[arr.length - 1]!.Hash;
-        if (record.Sequence !== arr.length || record.PrevHash !== expectedPrev)
-        {
-            throw new AuditTamperDetected(record.Event.TenantId, record.Sequence);
         }
         arr.push(record);
     }

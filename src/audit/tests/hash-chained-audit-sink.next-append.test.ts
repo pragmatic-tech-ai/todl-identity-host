@@ -51,12 +51,41 @@ test("Append rejects a wrong sequence", () =>
     assert.equal(sink.Records(Fixture.Tenant).length, 0);
 });
 
+test("Append of a multi-record chain links and verifies", () =>
+{
+    const sink = new HashChainedAuditSink();
+    const count = 4;
+    for (let i = 0; i < count; i++)
+    {
+        sink.Append(sink.Next(Fixture.Tenant, Fixture.Event()));
+    }
+    const chain = sink.Records(Fixture.Tenant);
+    assert.equal(chain.length, count);
+    assert.equal(sink.Verify(Fixture.Tenant), true);
+    for (let i = 1; i < count; i++)
+    {
+        assert.equal(chain[i]!.PrevHash, chain[i - 1]!.Hash);
+    }
+});
+
+test("Append with wrong prevHash on a non-empty chain throws and leaves chain unchanged", () =>
+{
+    const sink = new HashChainedAuditSink();
+    sink.Append(sink.Next(Fixture.Tenant, Fixture.Event()));
+    const next = sink.Next(Fixture.Tenant, Fixture.Event());
+    const bad = new ChainedAuditRecord(next.Event, next.Sequence, "f".repeat(64), next.Hash);
+    assert.throws(() => sink.Append(bad), AuditTamperDetected);
+    assert.equal(sink.Records(Fixture.Tenant).length, 1);
+    assert.equal(sink.Verify(Fixture.Tenant), true);
+});
+
 test("Append rejects a wrong prevHash", () =>
 {
     const sink = new HashChainedAuditSink();
     const good = sink.Next(Fixture.Tenant, Fixture.Event());
     const bad = new ChainedAuditRecord(good.Event, good.Sequence, "f".repeat(64), good.Hash);
     assert.throws(() => sink.Append(bad), AuditTamperDetected);
+    assert.equal(sink.Records(Fixture.Tenant).length, 0);
 });
 
 test("Record still appends and forwards to backing", async () =>
