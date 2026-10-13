@@ -8,7 +8,7 @@ export class AuditAnchorMismatch extends AuditTamperDetected
 
     public readonly Reason: AuditAnchorReason;
 
-    // Message carries identifiers + reason only (tenant id, seq, reason) — never a hash value secret or Detail.
+    // Message carries identifiers + reason only (tenant id, seq, reason) - never a secret value or audit Detail.
     public constructor(tenantId: string, seq: number, reason: AuditAnchorReason)
     {
         super(tenantId, seq);

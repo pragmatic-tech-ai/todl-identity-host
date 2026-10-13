@@ -15,9 +15,11 @@ test("AuditAnchorMismatch is an AuditTamperDetected carrying tenant, seq, reason
     assert.equal(err.Reason, AuditAnchorReason.Truncated);
     assert.ok(err.message.includes("t1"));
     assert.ok(err.message.includes("truncated"));
+    const base = new AuditTamperDetected("t1", 7).message;
+    assert.equal(err.message, base + " reason truncated");
 });
 
-test("AuditCheckpoint exposes readonly fields", () =>
+test("AuditCheckpoint exposes constructor values", () =>
 {
     const cp = new AuditCheckpoint("t1", 3, "abc", "2026-01-01T00:00:00.000Z", "sig");
     assert.equal(cp.TenantId, "t1");
