@@ -16,7 +16,8 @@ class SpyGrantStore implements IRoleGrantStore
     public async Save(grant: Grant): Promise<void> { this.grants.push(grant); }
     public async Revoke(grant: Grant): Promise<void>
     {
-        const index = this.grants.findIndex((g) => g.Subject === grant.Subject && g.Role === grant.Role);
+        // Match the full tuple, exactly as the real stores do, so the spy can never over-match.
+        const index = this.grants.findIndex((g) => g.Subject === grant.Subject && g.Role === grant.Role && g.Resource.Kind === grant.Resource.Kind && g.Resource.TenantId === grant.Resource.TenantId && g.Resource.Path.length === grant.Resource.Path.length && g.Resource.Path.every((p, i) => p === grant.Resource.Path[i]));
         if (index >= 0)
         {
             this.grants.splice(index, 1);
