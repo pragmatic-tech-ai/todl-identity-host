@@ -52,6 +52,12 @@ export class CachingRoleGrantStore implements IRoleGrantStore
         this.Invalidate(grant.Subject);
     }
 
+    public async Revoke(grant: Grant): Promise<void>
+    {
+        await this.backing.Revoke(grant);
+        this.Invalidate(grant.Subject);
+    }
+
     public Invalidate(subject: string): void
     {
         this.generation += 1;

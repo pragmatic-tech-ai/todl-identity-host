@@ -14,6 +14,14 @@ class SpyGrantStore implements IRoleGrantStore
         return this.grants.filter((g) => g.Subject === subject && g.Resource.TenantId === tenant.Id);
     }
     public async Save(grant: Grant): Promise<void> { this.grants.push(grant); }
+    public async Revoke(grant: Grant): Promise<void>
+    {
+        const index = this.grants.findIndex((g) => g.Subject === grant.Subject && g.Role === grant.Role);
+        if (index >= 0)
+        {
+            this.grants.splice(index, 1);
+        }
+    }
 }
 
 class Clock
@@ -145,7 +153,21 @@ class DeferredGrantStore implements IRoleGrantStore
         return snapshot;
     }
     public async Save(grant: Grant): Promise<void> { this.grants.push(grant); }
+    public async Revoke(_grant: Grant): Promise<void> { }
 }
+
+test("Revoke writes through to backing and invalidates the subject cache", async () =>
+{
+    const spy = new SpyGrantStore();
+    await spy.Save(Fixture.Grant("u1", Role.Admin));
+    const store = new CachingRoleGrantStore(spy, 1000, new Clock().Now);
+    const before = await store.GrantsFor("u1", Fixture.Tenant());
+    assert.equal(before.length, 1);
+    await store.Revoke(Fixture.Grant("u1", Role.Admin));
+    const after = await store.GrantsFor("u1", Fixture.Tenant());
+    assert.equal(spy.Calls, 2);
+    assert.equal(after.length, 0);
+});
 
 test("in-flight fetch overtaken by Save does not cache the stale list", async () =>
 {
