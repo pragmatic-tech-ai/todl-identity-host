@@ -7,13 +7,13 @@ import type { IRoleGrantStore } from "@pragmatic-tech-ai/todl-identity";
 class SpyGrantStore implements IRoleGrantStore
 {
     public Calls = 0;
+    public OnCalls = 0;
     private readonly grants: Grant[] = [];
     public async GrantsFor(subject: string, tenant: Tenant): Promise<readonly Grant[]>
     {
         this.Calls += 1;
         return this.grants.filter((g) => g.Subject === subject && g.Resource.TenantId === tenant.Id);
     }
-    public OnCalls = 0;
     public async GrantsOn(resource: ResourceRef): Promise<readonly Grant[]>
     {
         this.OnCalls += 1;
