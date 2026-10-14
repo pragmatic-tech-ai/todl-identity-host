@@ -13,6 +13,12 @@ class SpyGrantStore implements IRoleGrantStore
         this.Calls += 1;
         return this.grants.filter((g) => g.Subject === subject && g.Resource.TenantId === tenant.Id);
     }
+    public OnCalls = 0;
+    public async GrantsOn(resource: ResourceRef): Promise<readonly Grant[]>
+    {
+        this.OnCalls += 1;
+        return this.grants.filter((g) => g.Resource.Kind === resource.Kind && g.Resource.TenantId === resource.TenantId && g.Resource.Path.length === resource.Path.length && g.Resource.Path.every((p, i) => p === resource.Path[i]));
+    }
     public async Save(grant: Grant): Promise<void> { this.grants.push(grant); }
     public async Revoke(grant: Grant): Promise<void>
     {
@@ -153,6 +159,7 @@ class DeferredGrantStore implements IRoleGrantStore
         }
         return snapshot;
     }
+    public async GrantsOn(_resource: ResourceRef): Promise<readonly Grant[]> { return this.grants; }
     public async Save(grant: Grant): Promise<void> { this.grants.push(grant); }
     public async Revoke(_grant: Grant): Promise<void> { }
 }
@@ -183,4 +190,31 @@ test("in-flight fetch overtaken by Save does not cache the stale list", async ()
     assert.equal(backing.Calls, 2);
     assert.equal(fresh.length, 1);
     assert.equal(fresh[0]!.Role, Role.Admin);
+});
+
+test("GrantsOn delegates to the backing store every time, uncached", async () =>
+{
+    const spy = new SpyGrantStore();
+    await spy.Save(Fixture.Grant("u1", Role.Admin));
+    const store = new CachingRoleGrantStore(spy, 1000, new Clock().Now);
+    const root = new ResourceRef(ResourceKind.Tenant, "t1", []);
+    const first = await store.GrantsOn(root);
+    const second = await store.GrantsOn(root);
+    assert.equal(spy.OnCalls, 2);
+    assert.equal(first.length, 1);
+    assert.equal(second.length, 1);
+    await store.Revoke(Fixture.Grant("u1", Role.Admin));
+    assert.equal((await store.GrantsOn(root)).length, 0);
+});
+
+test("GrantsOn does not read or populate the subject cache", async () =>
+{
+    const spy = new SpyGrantStore();
+    const store = new CachingRoleGrantStore(spy, 1000, new Clock().Now);
+    await store.GrantsOn(new ResourceRef(ResourceKind.Tenant, "t1", []));
+    assert.equal(spy.Calls, 0);
+    await store.GrantsFor("u1", Fixture.Tenant());
+    await store.GrantsOn(new ResourceRef(ResourceKind.Tenant, "t1", []));
+    await store.GrantsFor("u1", Fixture.Tenant());
+    assert.equal(spy.Calls, 1);
 });

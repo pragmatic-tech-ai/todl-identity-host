@@ -1,4 +1,4 @@
-import type { Grant, IRoleGrantStore, Tenant } from "@pragmatic-tech-ai/todl-identity";
+import type { Grant, IRoleGrantStore, ResourceRef, Tenant } from "@pragmatic-tech-ai/todl-identity";
 
 class CacheEntry
 {
@@ -44,6 +44,16 @@ export class CachingRoleGrantStore implements IRoleGrantStore
             this.cache.set(key, new CacheEntry(subject, grants, nowMs + this.ttlMs));
         }
         return grants;
+    }
+
+    /**
+     * Resource-wide enumeration. Deliberately uncached: the per-subject cache is keyed by
+     * (tenant, subject), so a resource-wide result cannot be served from or stored in it,
+     * and callers (last-administrator enforcement) need the authoritative current set.
+     */
+    public async GrantsOn(resource: ResourceRef): Promise<readonly Grant[]>
+    {
+        return this.backing.GrantsOn(resource);
     }
 
     public async Save(grant: Grant): Promise<void>
