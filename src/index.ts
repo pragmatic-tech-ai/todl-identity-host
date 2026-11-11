@@ -17,3 +17,4 @@ export type { IAuditCheckpointStore } from "./audit/audit-checkpoint-store.js";
 export { InMemoryAuditCheckpointStore } from "./audit/in-memory-audit-checkpoint-store.js";
 export { AuditAnchor } from "./audit/audit-anchor.js";
 export { AuditAnchoring } from "./audit/audit-anchoring.js";
+export { InMemoryIdpDirectoryStore } from "./directory/in-memory-idp-directory-store.js";
