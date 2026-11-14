@@ -6,16 +6,16 @@ import { HashChainedAuditSink } from "../hash-chained-audit-sink.js";
 
 class Fixture
 {
-    public static Event(tenantId: string, detail: ReadonlyMap<string, string> = new Map(), principal: string | null = "p1"): AuditEvent
+    public static Event(realmId: string, detail: ReadonlyMap<string, string> = new Map(), principal: string | null = "p1"): AuditEvent
     {
-        return new AuditEvent(AuditEventKind.Authentication, tenantId, principal, new Date(0), detail);
+        return new AuditEvent(AuditEventKind.Authentication, realmId, principal, new Date(0), detail);
     }
 
     public static async FirstHash(event: AuditEvent): Promise<string>
     {
         const sink = new HashChainedAuditSink();
         await sink.Record(event);
-        return sink.Records(event.TenantId)[0]!.Hash;
+        return sink.Records(event.RealmId)[0]!.Hash;
     }
 }
 
@@ -67,7 +67,7 @@ test("composes over a backing sink, forwarding every event once", async () =>
     assert.equal(backing.Events.length, 2);
 });
 
-test("Records of an unknown tenant is empty", () =>
+test("Records of an unknown realm is empty", () =>
 {
     assert.deepEqual([...new HashChainedAuditSink().Records("nope")], []);
 });

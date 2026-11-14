@@ -10,7 +10,7 @@ test("sign then verify round-trips", () =>
     assert.equal(s.Verify("t1", 3, "abc", "2026-01-01T00:00:00.000Z", sig), true);
 });
 
-test("verify rejects a tampered sequence, head hash, at, or tenant", () =>
+test("verify rejects a tampered sequence, head hash, at, or realm", () =>
 {
     const s = new HmacAuditCheckpointSigner("k");
     const sig = s.Sign("t1", 3, "abc", "2026-01-01T00:00:00.000Z");

@@ -8,10 +8,10 @@ export class AuditAnchorMismatch extends AuditTamperDetected
 
     public readonly Reason: AuditAnchorReason;
 
-    // Message carries identifiers + reason only (tenant id, seq, reason) - never a secret value or audit Detail.
-    public constructor(tenantId: string, seq: number, reason: AuditAnchorReason)
+    // Message carries identifiers + reason only (realm id, seq, reason) - never a secret value or audit Detail.
+    public constructor(realmId: string, seq: number, reason: AuditAnchorReason)
     {
-        super(tenantId, seq);
+        super(realmId, seq);
         this.name = AuditAnchorMismatch.MismatchName;
         this.message = this.message + AuditAnchorMismatch.ReasonLabel + reason;
         this.Reason = reason;

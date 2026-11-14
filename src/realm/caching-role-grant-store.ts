@@ -1,4 +1,4 @@
-import type { Grant, IRoleGrantStore, ResourceRef, Tenant } from "@pragmatic-tech-ai/todl-identity";
+import type { Grant, IRoleGrantStore, ResourceRef, Realm } from "@pragmatic-tech-ai/todl-identity";
 
 class CacheEntry
 {
@@ -28,9 +28,9 @@ export class CachingRoleGrantStore implements IRoleGrantStore
     {
     }
 
-    public async GrantsFor(subject: string, tenant: Tenant): Promise<readonly Grant[]>
+    public async GrantsFor(subject: string, realm: Realm): Promise<readonly Grant[]>
     {
-        const key = CachingRoleGrantStore.KeyOf(tenant.Id, subject);
+        const key = CachingRoleGrantStore.KeyOf(realm.Id, subject);
         const nowMs = this.now().getTime();
         const hit = this.cache.get(key);
         if (hit !== undefined && nowMs < hit.ExpiresAtMs)
@@ -38,7 +38,7 @@ export class CachingRoleGrantStore implements IRoleGrantStore
             return hit.Grants;
         }
         const gen = this.generation;
-        const grants = await this.backing.GrantsFor(subject, tenant);
+        const grants = await this.backing.GrantsFor(subject, realm);
         if (this.generation === gen)
         {
             this.cache.set(key, new CacheEntry(subject, grants, nowMs + this.ttlMs));
@@ -48,7 +48,7 @@ export class CachingRoleGrantStore implements IRoleGrantStore
 
     /**
      * Resource-wide enumeration. Deliberately uncached: the per-subject cache is keyed by
-     * (tenant, subject), so a resource-wide result cannot be served from or stored in it,
+     * (realm, subject), so a resource-wide result cannot be served from or stored in it,
      * and callers (last-administrator enforcement) need the authoritative current set.
      */
     public async GrantsOn(resource: ResourceRef): Promise<readonly Grant[]>
@@ -86,8 +86,8 @@ export class CachingRoleGrantStore implements IRoleGrantStore
         this.cache.clear();
     }
 
-    private static KeyOf(tenantId: string, subject: string): string
+    private static KeyOf(realmId: string, subject: string): string
     {
-        return tenantId + CachingRoleGrantStore.KeySeparator + subject;
+        return realmId + CachingRoleGrantStore.KeySeparator + subject;
     }
 }

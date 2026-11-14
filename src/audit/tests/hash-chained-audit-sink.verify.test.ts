@@ -17,15 +17,15 @@ class Fixture
     public static readonly HashLength = 64;
     public static readonly ChainLength = 3;
 
-    public static Event(tenantId: string, detail?: ReadonlyMap<string, string>): AuditEvent
+    public static Event(realmId: string, detail?: ReadonlyMap<string, string>): AuditEvent
     {
         const d = detail ?? new Map([[Fixture.Key, Fixture.Value]]);
-        return new AuditEvent(AuditEventKind.Authentication, tenantId, Fixture.Principal, new Date(0), d);
+        return new AuditEvent(AuditEventKind.Authentication, realmId, Fixture.Principal, new Date(0), d);
     }
 
-    public static Indexed(tenantId: string, index: string): AuditEvent
+    public static Indexed(realmId: string, index: string): AuditEvent
     {
-        return Fixture.Event(tenantId, new Map([[Fixture.IndexKey, index]]));
+        return Fixture.Event(realmId, new Map([[Fixture.IndexKey, index]]));
     }
 
     public static async Three(sink: HashChainedAuditSink): Promise<void>
@@ -36,9 +36,9 @@ class Fixture
         }
     }
 
-    public static Chain(sink: HashChainedAuditSink, tenantId: string): ChainedAuditRecord[]
+    public static Chain(sink: HashChainedAuditSink, realmId: string): ChainedAuditRecord[]
     {
-        return sink.Records(tenantId) as ChainedAuditRecord[];
+        return sink.Records(realmId) as ChainedAuditRecord[];
     }
 }
 
@@ -83,7 +83,7 @@ test("Verify detects reordering", async () =>
     assert.equal(sink.Verify(Fixture.T1), false);
 });
 
-test("per-tenant isolation: appending to t2 never breaks t1's Verify", async () =>
+test("per-realm isolation: appending to t2 never breaks t1's Verify", async () =>
 {
     const sink = new HashChainedAuditSink();
     await Fixture.Three(sink);

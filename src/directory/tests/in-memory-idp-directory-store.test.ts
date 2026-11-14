@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { IdpDirectorySnapshot } from "@pragmatic-tech-ai/todl-identity";
 import { InMemoryIdpDirectoryStore } from "../in-memory-idp-directory-store.js";
 
-test("in-memory store round-trips per tenant and returns null for unknown", async () =>
+test("in-memory store round-trips per realm and returns null for unknown", async () =>
 {
     const store = new InMemoryIdpDirectoryStore();
     const a = IdpDirectorySnapshot.NonAuthoritative(new Date(1));

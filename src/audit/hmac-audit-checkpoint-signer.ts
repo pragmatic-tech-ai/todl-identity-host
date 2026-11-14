@@ -16,16 +16,16 @@ export class HmacAuditCheckpointSigner implements IAuditCheckpointSigner
         this.key = typeof key === "string" ? Buffer.from(key, HmacAuditCheckpointSigner.TextEncoding) : Buffer.from(key);
     }
 
-    public Sign(tenantId: string, sequence: number, headHash: string, at: string): string
+    public Sign(realmId: string, sequence: number, headHash: string, at: string): string
     {
         return createHmac(HmacAuditCheckpointSigner.Algo, this.key)
-            .update(this.Canonical(tenantId, sequence, headHash, at))
+            .update(this.Canonical(realmId, sequence, headHash, at))
             .digest(HmacAuditCheckpointSigner.Encoding);
     }
 
-    public Verify(tenantId: string, sequence: number, headHash: string, at: string, signature: string): boolean
+    public Verify(realmId: string, sequence: number, headHash: string, at: string, signature: string): boolean
     {
-        const expected = Buffer.from(this.Sign(tenantId, sequence, headHash, at), HmacAuditCheckpointSigner.TextEncoding);
+        const expected = Buffer.from(this.Sign(realmId, sequence, headHash, at), HmacAuditCheckpointSigner.TextEncoding);
         const given = Buffer.from(signature, HmacAuditCheckpointSigner.TextEncoding);
         if (expected.length !== given.length)
         {
@@ -36,10 +36,10 @@ export class HmacAuditCheckpointSigner implements IAuditCheckpointSigner
 
     // Fields joined by FieldSep; every free-text field is length-prefixed ("<len>:<text>") so a
     // separator inside a value cannot shift boundaries. The key is never logged or embedded.
-    private Canonical(tenantId: string, sequence: number, headHash: string, at: string): string
+    private Canonical(realmId: string, sequence: number, headHash: string, at: string): string
     {
         return [
-            this.Prefixed(tenantId),
+            this.Prefixed(realmId),
             String(sequence),
             this.Prefixed(headHash),
             this.Prefixed(at),

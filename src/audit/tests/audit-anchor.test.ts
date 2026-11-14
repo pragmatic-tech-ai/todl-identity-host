@@ -11,15 +11,15 @@ import type { ChainedAuditRecord } from "../chained-audit-record.js";
 
 class AuditAnchorFixtures
 {
-    public static Records(tenant: string, n: number): readonly ChainedAuditRecord[]
+    public static Records(realm: string, n: number): readonly ChainedAuditRecord[]
     {
         const chain = new HashChainedAuditSink();
         for (let i = 0; i < n; i++)
         {
-            const ev = new AuditEvent(AuditEventKind.AdminAction, tenant, "p1", new Date("2026-01-01T00:00:00Z"), new Map([["i", String(i)]]));
+            const ev = new AuditEvent(AuditEventKind.AdminAction, realm, "p1", new Date("2026-01-01T00:00:00Z"), new Map([["i", String(i)]]));
             chain.Record(ev);
         }
-        return chain.Records(tenant);
+        return chain.Records(realm);
     }
 
     public static Anchor(): AuditAnchor
@@ -61,7 +61,7 @@ test("Verify throws SignatureInvalid when the signature does not verify", () =>
     const a = AuditAnchorFixtures.Anchor();
     const recs = AuditAnchorFixtures.Records("t1", 3);
     const good = a.Build("t1", recs)!;
-    const forged = new AuditCheckpoint(good.TenantId, good.Sequence, good.HeadHash, good.At, "deadbeef");
+    const forged = new AuditCheckpoint(good.RealmId, good.Sequence, good.HeadHash, good.At, "deadbeef");
     assert.throws(() => a.Verify(recs, forged), (e: unknown) => e instanceof AuditAnchorMismatch && e.Reason === AuditAnchorReason.SignatureInvalid);
 });
 

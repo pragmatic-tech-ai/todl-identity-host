@@ -3,11 +3,11 @@ import type { IAuditCheckpointStore } from "./audit-checkpoint-store.js";
 
 export class InMemoryAuditCheckpointStore implements IAuditCheckpointStore
 {
-    private readonly byTenant = new Map<string, AuditCheckpoint[]>();
+    private readonly byRealm = new Map<string, AuditCheckpoint[]>();
 
-    public Latest(tenantId: string): Promise<AuditCheckpoint | undefined>
+    public Latest(realmId: string): Promise<AuditCheckpoint | undefined>
     {
-        const arr = this.byTenant.get(tenantId);
+        const arr = this.byRealm.get(realmId);
         if (arr === undefined || arr.length === 0)
         {
             return Promise.resolve(undefined);
@@ -25,14 +25,14 @@ export class InMemoryAuditCheckpointStore implements IAuditCheckpointStore
 
     public Append(checkpoint: AuditCheckpoint): Promise<void>
     {
-        const arr = this.byTenant.get(checkpoint.TenantId) ?? [];
+        const arr = this.byRealm.get(checkpoint.RealmId) ?? [];
         arr.push(checkpoint);
-        this.byTenant.set(checkpoint.TenantId, arr);
+        this.byRealm.set(checkpoint.RealmId, arr);
         return Promise.resolve();
     }
 
-    public Tenants(): Promise<readonly string[]>
+    public Realms(): Promise<readonly string[]>
     {
-        return Promise.resolve([...this.byTenant.keys()]);
+        return Promise.resolve([...this.byRealm.keys()]);
     }
 }

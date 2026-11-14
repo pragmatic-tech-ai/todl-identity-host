@@ -4,13 +4,13 @@ export class InMemoryIdpDirectoryStore implements IIdpDirectoryStore
 {
     private readonly snapshots = new Map<string, IdpDirectorySnapshot>();
 
-    public async Get(tenantId: string): Promise<IdpDirectorySnapshot | null>
+    public async Get(realmId: string): Promise<IdpDirectorySnapshot | null>
     {
-        return this.snapshots.get(tenantId) ?? null;
+        return this.snapshots.get(realmId) ?? null;
     }
 
-    public async Save(tenantId: string, snapshot: IdpDirectorySnapshot): Promise<void>
+    public async Save(realmId: string, snapshot: IdpDirectorySnapshot): Promise<void>
     {
-        this.snapshots.set(tenantId, snapshot);
+        this.snapshots.set(realmId, snapshot);
     }
 }

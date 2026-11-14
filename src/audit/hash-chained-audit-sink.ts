@@ -21,9 +21,9 @@ export class HashChainedAuditSink implements IAuditSink
     {
     }
 
-    public Next(tenantId: string, event: AuditEvent): ChainedAuditRecord
+    public Next(realmId: string, event: AuditEvent): ChainedAuditRecord
     {
-        const arr = this.chains.get(tenantId) ?? [];
+        const arr = this.chains.get(realmId) ?? [];
         const prevHash = arr.length === 0 ? HashChainedAuditSink.Genesis : arr[arr.length - 1]!.Hash;
         const hash = this.Compute(prevHash, event);
         return new ChainedAuditRecord(event, arr.length, prevHash, hash);
@@ -31,27 +31,27 @@ export class HashChainedAuditSink implements IAuditSink
 
     public Append(record: ChainedAuditRecord): void
     {
-        const existing = this.chains.get(record.Event.TenantId);
+        const existing = this.chains.get(record.Event.RealmId);
         const expectedSeq = existing === undefined ? 0 : existing.length;
         const expectedPrev = existing === undefined || existing.length === 0
             ? HashChainedAuditSink.Genesis
             : existing[existing.length - 1]!.Hash;
         if (record.Sequence !== expectedSeq || record.PrevHash !== expectedPrev)
         {
-            throw new AuditTamperDetected(record.Event.TenantId, record.Sequence);
+            throw new AuditTamperDetected(record.Event.RealmId, record.Sequence);
         }
         let arr = existing;
         if (arr === undefined)
         {
             arr = [];
-            this.chains.set(record.Event.TenantId, arr);
+            this.chains.set(record.Event.RealmId, arr);
         }
         arr.push(record);
     }
 
     public async Record(event: AuditEvent): Promise<void>
     {
-        const record = this.Next(event.TenantId, event);
+        const record = this.Next(event.RealmId, event);
         this.Append(record);
         if (this.backing !== undefined)
         {
@@ -59,14 +59,14 @@ export class HashChainedAuditSink implements IAuditSink
         }
     }
 
-    public Records(tenantId: string): readonly ChainedAuditRecord[]
+    public Records(realmId: string): readonly ChainedAuditRecord[]
     {
-        return this.chains.get(tenantId) ?? [];
+        return this.chains.get(realmId) ?? [];
     }
 
-    public Verify(tenantId: string): boolean
+    public Verify(realmId: string): boolean
     {
-        const chain = this.chains.get(tenantId) ?? [];
+        const chain = this.chains.get(realmId) ?? [];
         let expectedPrev = HashChainedAuditSink.Genesis;
         for (let i = 0; i < chain.length; i++)
         {
@@ -81,8 +81,8 @@ export class HashChainedAuditSink implements IAuditSink
     }
 
     // Canonical format: fields joined by FieldSep, in order
-    //   prevHash, Kind, TenantId, PrincipalId, At (ISO-8601), Detail.
-    // Every free-text value (TenantId, PrincipalId, detail keys/values) is length-prefixed
+    //   prevHash, Kind, RealmId, PrincipalId, At (ISO-8601), Detail.
+    // Every free-text value (RealmId, PrincipalId, detail keys/values) is length-prefixed
     // ("<len>:<text>") so separator characters inside values cannot shift boundaries.
     // PrincipalId is prefixed with NullMarker (null) or ValueMarker (present, even if ""),
     // so null and "" differ. Detail entries are sorted by key; each is "key PairSep value",
@@ -99,7 +99,7 @@ export class HashChainedAuditSink implements IAuditSink
         const canonical = [
             prevHash,
             String(event.Kind),
-            this.Prefixed(event.TenantId),
+            this.Prefixed(event.RealmId),
             principal,
             event.At.toISOString(),
             String(entries.length) + HashChainedAuditSink.LengthSep + detail,

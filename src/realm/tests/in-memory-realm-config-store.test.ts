@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { DelegationDepth, IdentityConfig } from "@pragmatic-tech-ai/todl-identity";
-import { InMemoryTenantConfigStore } from "../in-memory-tenant-config-store.js";
+import { InMemoryRealmConfigStore } from "../in-memory-realm-config-store.js";
 
 class Fixture
 {
@@ -13,7 +13,7 @@ class Fixture
 
 test("Save then Get returns the stored config; List reflects keys; absent is null", async () =>
 {
-    const store = new InMemoryTenantConfigStore();
+    const store = new InMemoryRealmConfigStore();
     assert.equal(await store.Get("t1"), null);
     await store.Save("t1", Fixture.Config("packA"));
     await store.Save("t2", Fixture.Config("packB"));

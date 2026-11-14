@@ -29,21 +29,21 @@ export class AuditAnchor
         {
             return;
         }
-        if (!this.signer.Verify(checkpoint.TenantId, checkpoint.Sequence, checkpoint.HeadHash, checkpoint.At, checkpoint.Signature))
+        if (!this.signer.Verify(checkpoint.RealmId, checkpoint.Sequence, checkpoint.HeadHash, checkpoint.At, checkpoint.Signature))
         {
-            throw new AuditAnchorMismatch(checkpoint.TenantId, checkpoint.Sequence, AuditAnchorReason.SignatureInvalid);
+            throw new AuditAnchorMismatch(checkpoint.RealmId, checkpoint.Sequence, AuditAnchorReason.SignatureInvalid);
         }
         if (records.length < checkpoint.Sequence)
         {
-            throw new AuditAnchorMismatch(checkpoint.TenantId, checkpoint.Sequence, AuditAnchorReason.Truncated);
+            throw new AuditAnchorMismatch(checkpoint.RealmId, checkpoint.Sequence, AuditAnchorReason.Truncated);
         }
         if (records[checkpoint.Sequence - 1]!.Hash !== checkpoint.HeadHash)
         {
-            throw new AuditAnchorMismatch(checkpoint.TenantId, checkpoint.Sequence, AuditAnchorReason.Diverged);
+            throw new AuditAnchorMismatch(checkpoint.RealmId, checkpoint.Sequence, AuditAnchorReason.Diverged);
         }
     }
 
-    public Build(tenantId: string, records: readonly ChainedAuditRecord[]): AuditCheckpoint | undefined
+    public Build(realmId: string, records: readonly ChainedAuditRecord[]): AuditCheckpoint | undefined
     {
         if (records.length === 0)
         {
@@ -51,8 +51,8 @@ export class AuditAnchor
         }
         const head = records[records.length - 1]!;
         const at = this.now().toISOString();
-        const signature = this.signer.Sign(tenantId, records.length, head.Hash, at);
-        return new AuditCheckpoint(tenantId, records.length, head.Hash, at, signature);
+        const signature = this.signer.Sign(realmId, records.length, head.Hash, at);
+        return new AuditCheckpoint(realmId, records.length, head.Hash, at, signature);
     }
 
     public DueFrom(count: number, anchoredSeq: number): boolean
